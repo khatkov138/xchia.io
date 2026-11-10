@@ -5,7 +5,7 @@ A community-driven non-custodial wallet and blockchain network explorer for the 
 ## Links
 
 - **Official Website:** [xchia.io](https://xchia.io)
-- **Developer / Feedback:** [@khatkov138](https://t.me) (Telegram)
+- **Developer / Feedback:** [@khatkov138](https://t.me/khatkov138) (Telegram)
 
 ## Tech Stack
 
