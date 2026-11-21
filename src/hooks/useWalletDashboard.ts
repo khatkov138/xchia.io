@@ -19,27 +19,15 @@ export interface ChiaCoinRecord {
 
 export interface ChiaAddressRecord {
   index: number
+  address: string
   puzzle_hash: string
   address_pubkey_hex: string
   mojo: number
   coins_count: number
 }
 
-type DerivedWalletAddress = ReturnType<typeof deriveWalletAddressData>
-
 const GAP = 40
 const MAX_LIM = 1000
-const derivationCache = new Map<string, DerivedWalletAddress>()
-
-function getCachedAddress(masterPkHex: string, index: number, network: ChiaNetwork) {
-  const key = `${network}:${masterPkHex}:${index}`
-  let cached = derivationCache.get(key)
-  if (!cached) {
-    cached = deriveWalletAddressData(masterPkHex, index, network)
-    derivationCache.set(key, cached)
-  }
-  return cached
-}
 
 export function useWalletDashboard() {
   const unhardenedPkHex = useWalletSessionStore((state: any) => state.unhardenedPkHex)
@@ -62,12 +50,13 @@ export function useWalletDashboard() {
         const batchHashes: string[] = []
 
         for (let i = curStart; i < Math.min(curEnd, MAX_LIM); i++) {
-          const derived = getCachedAddress(unhardenedPkHex, i, network)
+          const derived = deriveWalletAddressData(unhardenedPkHex, i, network)
           const cleanPh = derived.puzzle_hash.replace(/^0x/i, "").toLowerCase()
           phMap.set(cleanPh, i)
           batchHashes.push(derived.puzzle_hash)
           addresses.push({
             index: i,
+            address: derived.address,
             puzzle_hash: derived.puzzle_hash,
             address_pubkey_hex: derived.address_pubkey_hex,
             mojo: 0,

@@ -1,22 +1,27 @@
 export type ChiaNetwork = "mainnet" | "testnet11"
 
-// На проде просто пропишешь в .env: NEXT_PUBLIC_RPC_URL=https://xchia.io
-const RPC_BASE_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:3000"
+const SERVER_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://localhost:3000"
 
 export async function callChiaRpc<T = any>(
   network: ChiaNetwork,
   method: string,
   payload: Record<string, any> = {}
 ): Promise<T> {
-   const res = await fetch(`${RPC_BASE_URL}/api/rpc/${network}/${method}`, {
+  if (network === "testnet11") {
+    throw new Error("Testnet11 временно отключён")
+  }
+
+  const isServer = typeof window === "undefined"
+  const url = `https://api.coinset.org/${method}`
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(typeof window === "undefined" ? { Origin: RPC_BASE_URL } : {}),
+      ...(isServer ? { Origin: SERVER_RPC_URL } : {}),
     },
     body: JSON.stringify(payload),
   })
-
 
   if (!res.ok) {
     throw new Error(`RPC Error [${network}/${method}]: HTTP ${res.status}`)

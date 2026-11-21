@@ -3,19 +3,15 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   serverExternalPackages: ['chia-wallet-lib', 'clvm-lib', 'chia-bls'],
-  
+
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
-   logging: {
-    fetches: {
-      fullUrl: true,
-    },
-  },
+
   experimental: {
     agentFeedback: true,
   },
-  
+
   turbopack: {
     rules: {
       "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" },
@@ -23,18 +19,20 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
+
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline';
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.cloudflareinsights.com https://*.googletagmanager.com;
       style-src 'self' 'unsafe-inline';
-      img-src 'self' blob: data:;
+      img-src 'self' blob: data: https://*.google-analytics.com https://*.googletagmanager.com;
       font-src 'self';
-      connect-src 'self' xchia.io *.xchia.io;
+      connect-src 'self' ${isDev ? 'http://localhost:3000 ws://localhost:3000' : ''} https://coinset.org https://*.coinset.org https://xchia.io https://*.xchia.io https://cloudflareinsights.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com;
       object-src 'none';
       base-uri 'self';
       form-action 'self';
       frame-ancestors 'none';
-      upgrade-insecure-requests;
+      ${isDev ? '' : 'upgrade-insecure-requests;'}
     `.replace(/\s{2,}/g, ' ').trim();
 
     return [

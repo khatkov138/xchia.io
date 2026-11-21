@@ -17,16 +17,6 @@ const DEFAULT_HIDDEN_PUZZLE_HASH = fromHex(
   '711d6c4e32c92e53179b199484cf8c897542bc57f2b22582799f9d657eec4699'
 );
 
-const PROJECT_FEED_ADDRESS =
-  process.env.NEXT_PUBLIC_PROJECT_FEED_ADDRESS ||
-  'txch1zlxscepjrdsf37tzwmnrt3asejxq3hsh44cvpq00n5s6nesl7jlqw5lftl';
-
-const BUILDER_FEE_MOJOS = Number(
-  process.env.NEXT_PUBLIC_BUILDER_FEE_MOJOS || 10_000_000_000
-);
-
-
-
 export function addressToPuzzleHashBytes(address: string): Uint8Array {
   const decoded = bech32m.decode(address.trim());
   const bytes = Uint8Array.from(bech32m.fromWords(decoded.words));
@@ -55,7 +45,6 @@ function calculateSyntheticOffsetHex(pkBytes: Uint8Array): string {
 
   return offsetBigInt.toString(16).padStart(64, '0');
 }
-
 
 export interface BuildSpendBundleInput {
   network: ChiaNetwork;
@@ -140,33 +129,30 @@ export async function buildSpendBundleClient(params: BuildSpendBundleInput) {
     });
   }
 
-  mojos_to_send = mojos_to_send - fee_mojos - BUILDER_FEE_MOJOS;
+  mojos_to_send = mojos_to_send - fee_mojos;
   if (mojos_to_send <= 0) {
-    throw new Error('Сумма перевода слишком мала для покрытия комиссий!');
+    throw new Error('Сумма перевода слишком мала для покрытия комиссии сети!');
   }
 
-  const required = mojos_to_send + fee_mojos + BUILDER_FEE_MOJOS;
+  const required = mojos_to_send + fee_mojos;
   if (totalInputAmount < required) {
     throw new Error('Недостаточно выбранных монет на балансе!');
   }
 
   const targetPhBytes = addressToPuzzleHashBytes(send_to_address);
-  const feedPhBytes = addressToPuzzleHashBytes(PROJECT_FEED_ADDRESS);
   const changeAmount = totalInputAmount - required;
 
   const leadItem = parsedCoins.at(0)!;
 
- const leadConditions: Program[] = [
-  clvm.createCoin(targetPhBytes, BigInt(mojos_to_send)),
-  clvm.createCoin(feedPhBytes, BigInt(BUILDER_FEE_MOJOS)),
-];
+  const leadConditions: Program[] = [
+    clvm.createCoin(targetPhBytes, BigInt(mojos_to_send)),
+  ];
 
-if (changeAmount > 0) {
-  leadConditions.push(
-    clvm.createCoin(leadItem.puzzleHashBytes, BigInt(changeAmount))
-  );
-}
-
+  if (changeAmount > 0) {
+    leadConditions.push(
+      clvm.createCoin(leadItem.puzzleHashBytes, BigInt(changeAmount))
+    );
+  }
 
   if (parsedCoins.length > 1) {
     for (let idx = 1; idx < parsedCoins.length; idx++) {
@@ -191,12 +177,10 @@ if (changeAmount > 0) {
       currentConds = Array.of(clvm.assertPuzzleAnnouncement(announcementHash));
     }
 
-             const condsListProgram = clvm.alloc(currentConds);
+    const condsListProgram = clvm.alloc(currentConds);
     const delegatedPuzzle = clvm.pair(clvm.int(1n), condsListProgram);
     // Стандартное решение для p2_delegated_puzzle_or_hidden_puzzle: (nil delegated_puzzle nil)
     const solution = clvm.alloc(Array.of(clvm.nil(), delegatedPuzzle, clvm.nil()));
-
-
 
     const delTreeHash = delegatedPuzzle.treeHash();
     const signPayload = new Uint8Array(delTreeHash.length + item.coinIdBytes.length + genesisBytes.length);
@@ -232,7 +216,7 @@ if (changeAmount > 0) {
         total_inputs_mojo: totalInputAmount,
         total_outputs_mojo: totalInputAmount,
         fee_network_mojo: fee_mojos,
-        is_dust_fee_collected: true,
+        is_dust_fee_collected: false,
         is_dust_split_applied: false,
       },
       disposition: {
@@ -245,10 +229,6 @@ if (changeAmount > 0) {
           wallet_index: leadItem.walletIndex,
           puzzle_hash: '0x' + toHex(leadItem.puzzleHashBytes).toLowerCase(),
           amount_mojo: changeAmount,
-        },
-        dust_fee: {
-          puzzle_hash: '0x' + toHex(feedPhBytes).toLowerCase(),
-          amount_mojo: BUILDER_FEE_MOJOS,
         },
       },
     },

@@ -20,7 +20,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const isRu = currentLang === "ru"
   const safeNet = network || "mainnet"
   const safeAddr = address.trim()
-  const curPage = Number(sParams?.page) || 1
+  const curPage = Math.max(1, Math.floor(Number(sParams?.page)) || 1)
   const t = addressTranslations[currentLang]
 
   if (!validateChiaAddress(safeAddr, safeNet).isValid) {
@@ -55,12 +55,13 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     twitter: { card: "summary_large_image", title, description },
   }
 }
+
 async function AddressContent({ params, searchParams }: PageProps) {
   const { lang, network, address } = await params
   const sParams = await searchParams
   const safeNet = network || "mainnet"
   const safeAddr = address.trim()
-  const curPage = Number(sParams?.page) || 1
+  const curPage = Math.max(1, Math.floor(Number(sParams?.page)) || 1)
   const t = addressTranslations[isSupportedLanguage(lang) ? lang : "en"]
 
   const { isValid, error: addressError } = validateChiaAddress(safeAddr, safeNet)

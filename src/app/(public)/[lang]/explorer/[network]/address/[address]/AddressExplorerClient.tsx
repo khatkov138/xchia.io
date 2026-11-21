@@ -10,7 +10,7 @@ import { WalletLanguage } from "@/config/i18n"
 import { addressTranslations } from "./address.translations"
 import { AddressHeader } from "./AddressHeader"
 import { AddressQrDialog } from "./AddressQrDialog"
-import { useXchPrice } from "@/hooks/useXchPrice" // Укажи свой актуальный путь к хуку
+import { useXchPrice } from "@/hooks/useXchPrice"
 import { trackAddress } from "@/lib/utils/chia-track-address"
 
 interface AddressExplorerClientProps {
@@ -32,22 +32,22 @@ export function AddressExplorerClient({ dataPromise, net, addr, lang, page }: Ad
   const t = addressTranslations[lang as WalletLanguage] || addressTranslations.en
   const isRu = t.pageTitle === "Обзор Адреса"
 
-  // Подключаем наш изолированный хук курса XCH
   const { usdPrice, isReady: isPriceReady } = useXchPrice()
 
   const { data: res } = useQuery({
     queryKey: ["addrData", addr, net, page],
     queryFn: () => trackAddress(addr, net, page, perPage),
     initialData: initialServerData,
-    staleTime: 10000,
+    staleTime: 15000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 
-
   const balanceMojo = res?.balance_mojo || 0
+  const isHeavyBalance = Boolean(res?.is_heavy_balance)
   const totalBlocks = res?.total_blocks || 0
   const historyList = res?.history || []
 
-  // Считаем примерный баланс в USD (только для mainnet)
   const formattedUsdBalance = useMemo(() => {
     const isMainnet = net.toLowerCase() === "mainnet" || net.toLowerCase() === "xch"
     if (!isMainnet || !isPriceReady || usdPrice === null) return null
@@ -73,22 +73,22 @@ export function AddressExplorerClient({ dataPromise, net, addr, lang, page }: Ad
 
   return (
     <div className="space-y-5 w-full font-mono text-[11px] text-left">
-      {/* 🎯 Модуль Шапки */}
       <AddressHeader addr={addr} net={net} titleExplorer={t.seoTitle} onQrOpen={() => setIsQrOpen(true)} />
 
-      {/* Карточки метрик */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
           {
             t: isRu ? "Баланс" : "Balance",
-            v: `${fMojo(balanceMojo)} XCH`,
-            sub: formattedUsdBalance ? `≈ ${formattedUsdBalance}` : null,
+            v: `${fMojo(balanceMojo)}${isHeavyBalance ? "+" : ""} XCH`,
+            sub: isHeavyBalance
+              ? (isRu ? "Много UTXO (окно)" : "Heavy UTXO address")
+              : formattedUsdBalance ? `≈ ${formattedUsdBalance}` : null,
             i: <Wallet size={20} />,
             c: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
           },
           {
             t: isRu ? "Всего блоков активности" : "Total Activity Blocks",
-            v: `${totalBlocks} BLOCKS`,
+            v: `${totalBlocks}${res?.has_more_history ? "+" : ""} BLOCKS`,
             sub: null,
             i: <Box size={20} />,
             c: "bg-[#FF2E93]/10 text-[#FF2E93] border-[#FF2E93]/20",
@@ -113,7 +113,6 @@ export function AddressExplorerClient({ dataPromise, net, addr, lang, page }: Ad
         ))}
       </div>
 
-      {/* История */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between gap-2 px-0.5 text-zinc-500">
           <div className="flex items-center gap-1.5">
@@ -135,7 +134,7 @@ export function AddressExplorerClient({ dataPromise, net, addr, lang, page }: Ad
             <TxHistoryView historyList={historyList} net={net.toLowerCase()} lang={lang} compact={false} address={addr} />
           </CardContent>
         </Card>
-        {totalBlocks > page * perPage && (
+        {(totalBlocks > perPage || page > 1) && (
           <div className="flex items-center justify-center gap-2 pt-2">
             <button
               disabled={page === 1 || isPending}
@@ -160,7 +159,6 @@ export function AddressExplorerClient({ dataPromise, net, addr, lang, page }: Ad
         )}
       </div>
 
-      {/* 🎯 Модуль Диалога с QR */}
       <AddressQrDialog
         isOpen={isQrOpen}
         onOpenChange={setIsQrOpen}

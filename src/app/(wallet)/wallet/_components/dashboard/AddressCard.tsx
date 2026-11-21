@@ -2,11 +2,12 @@
 
 import React, { useState, useMemo, useTransition } from "react"
 import { Copy, Check, Loader2, AlertTriangle, ExternalLink } from "lucide-react"
-import { useWalletDashboard } from "@/hooks/useWalletDashboard"
+import { useWalletSessionStore } from "@/store/useWalletSessessionStore"
 import { useUserSettingsStore } from "@/providers/UserSettnigsProvider"
-import { puzzleHashToAddress } from "@/lib/utils/crypto"
+import { deriveWalletAddressData } from "@/lib/utils/chia-address"
 import { useRouter } from "next/navigation"
 import { addressCardTranslations } from "./translations/address-card.transaltions"
+import { usePrimaryAddress } from "@/hooks/usePrimaryAddress"
 
 // 🚀 ПОДКЛЮЧАЕМ ЛОКАЛИЗАЦИЮ ИЗ НАШЕГО ЛОКАЛЬНОГО СЛОВАРЯ
 
@@ -22,14 +23,9 @@ export function AddressCard() {
   const network = useUserSettingsStore((state) => state.network)
   const isMainnet = network === 'mainnet'
 
-  const { addresses, isLoading: isDashboardLoading } = useWalletDashboard()
 
-  const targetObj = addresses && addresses.length > 0
-    ? (addresses.find((a: any) => a.index === 0) || addresses[0])
-    : null
+  const { address: address0, isLoaded } = usePrimaryAddress()
 
-  const address0 = puzzleHashToAddress(targetObj?.puzzle_hash, network)
-  const isLoaded = !isDashboardLoading && address0 !== ""
 
   const formattedAddress = useMemo(() => {
     if (!address0 || address0.length < 12) return null

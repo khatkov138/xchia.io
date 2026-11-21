@@ -2,10 +2,18 @@ import chiaBls from 'chia-bls';
 import { sha256 } from '@noble/hashes/sha2';
 import { PublicKey, standardPuzzleHash, toHex } from 'chia-wallet-sdk-wasm';
 import { puzzleHashToAddress } from './crypto';
-// Укажи свой реальный путь, где у тебя лежит puzzleHashToAddress
 
 const { PrivateKey, JacobianPoint } = chiaBls;
 const GROUP_ORDER = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001n;
+
+export interface DerivedWalletAddress {
+  index: number;
+  address: string;
+  puzzle_hash: string;
+  address_pubkey_hex: string;
+}
+
+const addressCache = new Map<string, DerivedWalletAddress>();
 
 function bytesToScalarSk(hashBytes: Uint8Array): any {
   const hashHex = Buffer.from(hashBytes).toString('hex');
@@ -50,12 +58,16 @@ export function getWalletPkUnhardened(masterPkHex: string, index: number): any {
   return chiaDeriveChildPkUnhardened(walletBranchPk, index);
 }
 
-// 3. Главная функция: вычисляет адрес и puzzle_hash в браузере (100% как в Python)
+// 3. Главная функция с автоматическим кэшированием
 export function deriveWalletAddressData(
   masterPkHex: string,
   index: number,
   network: 'mainnet' | 'testnet11'
-) {
+): DerivedWalletAddress {
+  const cacheKey = `${network}:${masterPkHex}:${index}`;
+  const cached = addressCache.get(cacheKey);
+  if (cached) return cached;
+
   const walletPk = getWalletPkUnhardened(masterPkHex, index);
   const walletPkBytes = walletPk.toBytes();
 
@@ -66,10 +78,13 @@ export function deriveWalletAddressData(
   const puzzleHash = '0x' + toHex(puzzleHashBytes).toLowerCase();
   const address = puzzleHashToAddress(puzzleHash, network);
 
-  return {
+  const result: DerivedWalletAddress = {
     index,
     address,
     puzzle_hash: puzzleHash,
     address_pubkey_hex: '0x' + Buffer.from(walletPkBytes).toString('hex').toLowerCase(),
   };
+
+  addressCache.set(cacheKey, result);
+  return result;
 }

@@ -9,7 +9,7 @@ const agents: Partial<Record<Network, https.Agent>> = {};
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:3000',
   'https://xchia.io',
-  'https://www.xchia.io',
+  'https://xchia.io',
 ]);
 
 function getAgent(network: Network): https.Agent {
@@ -73,6 +73,13 @@ export async function POST(
   const payload = JSON.stringify(validation.data);
 
   return new Promise<NextResponse>((resolve) => {
+    let settled = false;
+    const finish = (response: NextResponse) => {
+      if (settled) return;
+      settled = true;
+      resolve(response);
+    };
+
     const rpcReq = https.request(
       {
         hostname: '127.0.0.1',
@@ -92,26 +99,37 @@ export async function POST(
           data += chunk;
           if (data.length > LIMITS.MAX_RESPONSE_BYTES) {
             rpcReq.destroy();
-            resolve(NextResponse.json({ success: false, error: 'Response too large' }, { status: 413 }));
+            finish(NextResponse.json({ success: false, error: 'Response too large' }, { status: 413 }));
           }
         });
         res.on('end', () => {
           try {
-            resolve(NextResponse.json(JSON.parse(data)));
+            finish(NextResponse.json(JSON.parse(data)));
           } catch {
-            resolve(NextResponse.json({ success: false, error: 'Invalid response from node' }, { status: 502 }));
+            finish(NextResponse.json({ success: false, error: 'Invalid response from node' }, { status: 502 }));
           }
         });
       }
     );
 
+    const onAbort = () => {
+      rpcReq.destroy();
+      finish(NextResponse.json({ success: false, error: 'Client aborted' }, { status: 499 }));
+    };
+
+    if (req.signal.aborted) {
+      onAbort();
+      return;
+    }
+    req.signal.addEventListener('abort', onAbort, { once: true });
+
     rpcReq.on('timeout', () => {
       rpcReq.destroy();
-      resolve(NextResponse.json({ success: false, error: 'Node RPC timeout' }, { status: 504 }));
+      finish(NextResponse.json({ success: false, error: 'Node RPC timeout' }, { status: 504 }));
     });
 
     rpcReq.on('error', (err) => {
-      resolve(NextResponse.json({ success: false, error: err.message }, { status: 502 }));
+      finish(NextResponse.json({ success: false, error: err.message }, { status: 502 }));
     });
 
     rpcReq.write(payload);

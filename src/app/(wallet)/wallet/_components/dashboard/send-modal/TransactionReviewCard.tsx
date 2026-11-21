@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useSendModalContext } from "./SendModalContext"
-import { useUserSettingsStore } from "@/providers/UserSettnigsProvider" // 📡 Импортируем твой стор юзер-настроек
+import { useUserSettingsStore } from "@/providers/UserSettnigsProvider"
 import { formatMojoToXchString } from "@/lib/utils"
 import { renderHighlightedAddress } from "@/lib/utils/ui"
 
@@ -22,21 +22,15 @@ export function TransactionReviewCard() {
 
   const audit = preparedSpendData?.audit_info
 
-  // Фиксированная комиссия XChia Wallet из конфига
-  const builderFeeMojo = BigInt(process.env.NEXT_PUBLIC_BUILDER_FEE_MOJOS || "10000000000")
-
-  // Канонический расчет списания от бэка (Шаг 2 и 3)
+  // Канонический расчет списания (Шаг 2 и 3)
   const getTotalOutflowMojoFromBackend = () => {
     if (!audit) return 0n
     const target = BigInt(audit.disposition.target.amount_mojo)
     const networkFee = BigInt(audit.summary.fee_network_mojo)
-    const dustFee = audit.summary.is_dust_fee_collected 
-      ? BigInt(audit.disposition.dust_fee.amount_mojo) 
-      : 0n
-    return target + networkFee + dustFee
+    return target + networkFee
   }
 
-  // Расчет чистой суммы получателя на Шаге 1 (Инпут минус все комиссии)
+  // Расчет чистой суммы получателя на Шаге 1 (Инпут минус комиссия сети)
   const getClientEstimatedRecipientXch = () => {
     try {
       const trimmedAmount = amount.trim().replace(",", ".")
@@ -45,8 +39,8 @@ export function TransactionReviewCard() {
       const totalOutflowMojo = BigInt(Math.round(parseFloat(trimmedAmount) * 1e12))
       const networkFeeMojo = BigInt(String(customFeeMojo || "0").trim())
       
-      // Чистая отправка получателю = Грязный инпут - Сеть - Кошелек
-      const recipientMojo = totalOutflowMojo - networkFeeMojo - builderFeeMojo
+      // Чистая отправка получателю = Инпут - Сеть
+      const recipientMojo = totalOutflowMojo - networkFeeMojo
       
       if (recipientMojo <= 0n) return `0 ${tokenTicker}`
       return formatMojoToXchString(recipientMojo).replace("XCH", tokenTicker)
@@ -103,17 +97,6 @@ export function TransactionReviewCard() {
               ) : (
                 audit ? formatWithNetworkTicker(BigInt(audit.summary.fee_network_mojo)) : `0 ${tokenTicker}`
               )}
-            </span>
-          </div>
-
-          {/* 3. 🔌 Комиссия XChia Wallet */}
-          <div className="flex justify-between items-center text-[11px] text-zinc-500">
-            <span>Комиссия XChia Wallet:</span>
-            <span className="font-mono text-zinc-400">
-              {step === 1 
-                ? formatWithNetworkTicker(builderFeeMojo)
-                : formatWithNetworkTicker(audit ? BigInt(audit?.disposition?.dust_fee?.amount_mojo || builderFeeMojo) : builderFeeMojo)
-              }
             </span>
           </div>
         </div>

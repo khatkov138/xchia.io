@@ -1,13 +1,14 @@
 'use client'
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { X, Copy, Check, Share2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import QRCode from "qrcode"
-import { useWalletDashboard } from "@/hooks/useWalletDashboard"
+import { useWalletSessionStore } from "@/store/useWalletSessessionStore"
 import { useUserSettingsStore } from "@/providers/UserSettnigsProvider"
-import { puzzleHashToAddress } from "@/lib/utils/crypto" // 🚀 Наш чистый и умный конвертер
+import { deriveWalletAddressData } from "@/lib/utils/chia-address"
+import { usePrimaryAddress } from "@/hooks/usePrimaryAddress"
 
 interface ReceiveModalProps {
   isOpen: boolean
@@ -18,17 +19,10 @@ export function ReceiveModal({ isOpen, onClose }: ReceiveModalProps) {
   const [copied, setCopied] = useState(false)
   const [qrSvg, setQrSvg] = useState<string>("")
 
-  // Достаем текущую сеть из Zustand
-  const network = useUserSettingsStore((state) => state.network)
-  const { addresses, isLoading: isDashboardLoading } = useWalletDashboard()
 
-  const targetObj = addresses && addresses.length > 0
-    ? (addresses.find((a: any) => a.index === 0) || addresses[0])
-    : null
+  // Мгновенно получаем нулевой адрес из кэша без ожидания RPC
+  const { address: walletAddress, isLoaded: isAddressLoaded } = usePrimaryAddress()
 
-  // 🚀 ВМЕСТО СТАРОГО ХУКА: Прямой вызов функции с передачей сети
-  const walletAddress = puzzleHashToAddress(targetObj?.puzzle_hash, network)
-  const isAddressLoaded = !isDashboardLoading && walletAddress !== ""
 
   useEffect(() => {
     if (isAddressLoaded && isOpen) {

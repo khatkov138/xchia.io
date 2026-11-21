@@ -13,13 +13,13 @@ export function ActivityList() {
   const [selectedTx, setSelectedTx] = useState<any>(null)
   const perPage = 10
   
-  const { isLoading: isDashLoading } = useWalletDashboard()
+
   const { historyList, totalBlocks, page, setPage, isLoading: isTxLoading, isFetching } = useWalletTransactions(perPage)
   
   const network = useUserSettingsStore((state: any) => state.network)
   const language = useUserSettingsStore((state: any) => state.language) ?? "en" // 🎯 Дефолтим на en
 
-  const isDataLoading = isDashLoading || isTxLoading
+  const isDataLoading =  isTxLoading
 
   return (
     <div className="space-y-2.5 font-mono text-[11px]">

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Providers } from "@/providers/Providers"; 
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { Providers } from "@/providers/Providers";
 
 import "./globals.css";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,10 +38,31 @@ export default function RootLayout({
   return (
     <html className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}>
       <body className="min-h-full flex flex-col bg-zinc-950 text-white font-sans select-none">
-       {/* 🚀 Глобальный провайдер кэша TanStack Query */}
+        {/* 🚀 Глобальный провайдер кэша TanStack Query */}
         <Providers>
           {children}
         </Providers>
+
+        <Script
+          id="google-tag-manager"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
+      gtag('js', new Date());
+      gtag('config', 'G-ZY5GT0TW54');
+    `,
+          }}
+        />
+        <Script
+          id="google-gtm-script"
+          src="https://www.googletagmanager.com/gtm.js?id=GTM-ML73LVS8"
+          strategy="afterInteractive"
+        />
+
+
       </body>
     </html>
   );

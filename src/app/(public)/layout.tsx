@@ -30,8 +30,8 @@ export async function generateMetadata({ params }: Omit<PublicLayoutProps, 'chil
     : "XCHIA — Secure Next-Gen Web Wallet & Explorer for Chia (XCH)"
 
   const description = isRu
-    ? "Премиальный некастодиальный real-time кошелек для Chia Network в вашем браузере. 100% Open Source, локальное шифрование ключей без скачивания тяжелых программ."
-    : "Premium non-custodial real-time web wallet and explorer for Chia Network in your browser. 100% Open Source, local key encryption."
+    ? "Некастодиальный real-time кошелек для Chia Network в вашем браузере. 100% Open Source, локальное шифрование ключей без скачивания тяжелых программ."
+    : "non-custodial real-time web wallet and explorer for Chia Network in your browser. 100% Open Source, local key encryption."
 
   const APP_URL = "https://xchia.io"
 
